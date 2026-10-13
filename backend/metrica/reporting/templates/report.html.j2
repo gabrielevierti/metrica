@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>METRICA report {{ d.report_id }} - {{ d.case.title }}</title>
+<style>
+:root { --ink:#1d2330; --muted:#5d6577; --line:#d9dde6; --bg:#ffffff; --soft:#f4f6fa; --accent:#1f5f8b;
+        --warn:#9a5b00; --warnbg:#fff6e6; --bad:#9b1c1c; --good:#1b6b3a; }
+* { box-sizing: border-box; }
+body { margin:0; font: 14px/1.5 "Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--ink); background:var(--bg); }
+.page { max-width: 1060px; margin: 0 auto; padding: 32px 36px 80px; }
+header.cover { border-bottom: 3px solid var(--ink); padding-bottom: 18px; margin-bottom: 26px; }
+header.cover .brand { font-weight: 800; letter-spacing: .18em; font-size: 13px; color: var(--accent); }
+header.cover h1 { margin: 6px 0 4px; font-size: 28px; }
+.meta { display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 6px 22px; color: var(--muted); font-size: 13px; }
+.meta b { color: var(--ink); font-weight: 600; }
+h2 { font-size: 20px; margin: 38px 0 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+h3 { font-size: 15px; margin: 22px 0 8px; }
+p.lead { font-size: 15px; }
+.badge { display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--soft); border:1px solid var(--line); }
+.status-CALIBRATED_METRIC { background:#e6f4ea; color:var(--good); border-color:#b7dfc4; }
+.status-ESTIMATED_METRIC { background:#e8f0fb; color:#1f4f8b; border-color:#bcd0ee; }
+.status-RELATIVE, .status-ARBITRARY { background:var(--warnbg); color:var(--warn); border-color:#f0d39c; }
+.callout { border-left: 4px solid var(--warn); background: var(--warnbg); padding: 10px 14px; margin: 12px 0; }
+.callout.info { border-color: var(--accent); background: #eef4fa; }
+table { width:100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 12.5px; }
+th, td { text-align:left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { background: var(--soft); font-weight: 600; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+code, .mono { font-family: "JetBrains Mono", Consolas, monospace; font-size: 11.5px; word-break: break-all; }
+figure { margin: 10px 0 18px; }
+figure img { max-width: 100%; border: 1px solid var(--line); border-radius: 4px; }
+figcaption { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.crops { display:flex; flex-wrap:wrap; gap: 10px; }
+.crop { border:1px solid var(--line); border-radius:4px; padding:6px; font-size:11px; color:var(--muted); background:#fff; }
+.crop img { display:block; max-height: 150px; max-width: 220px; margin-bottom: 4px; image-rendering: pixelated; }
+.tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--soft); border: 1px solid var(--line); }
+.tag.machine { background:#f1ecfb; border-color:#d9cdf3; color:#563d91; }
+.tag.verified { background:#e6f4ea; border-color:#b7dfc4; color:var(--good); }
+.tag.hyp { background: var(--warnbg); border-color:#f0d39c; color: var(--warn); }
+ul.tight li { margin: 2px 0; }
+.toc a { color: var(--accent); text-decoration: none; }
+.toc { columns: 2; font-size: 13px; }
+@media print { .page { padding: 0 8mm; } h2 { page-break-before: auto; } figure, table, .crop { page-break-inside: avoid; } }
+</style>
+</head>
+<body><div class="page">
+<header class="cover">
+  <div class="brand">METRICA · VIDEO-TO-3D SCENE ANALYSIS REPORT</div>
+  <h1>{{ d.case.title }}</h1>
+  <div class="meta">
+    <div><b>Case reference:</b> {{ d.case.reference or "—" }}</div>
+    <div><b>Case ID:</b> <span class="mono">{{ d.case.id }}</span></div>
+    <div><b>Report ID:</b> <span class="mono">{{ d.report_id }}</span></div>
+    <div><b>Generated:</b> {{ d.generated }}</div>
+    <div><b>Software:</b> METRICA {{ d.software_version }}</div>
+    <div><b>Scale status:</b> <span class="badge status-{{ d.coordinate_system.status }}">{{ d.coordinate_system.status }}</span></div>
+    {% if d.analyst %}<div><b>Analyst:</b> {{ d.analyst }}</div>{% endif %}
+    {% if d.purpose %}<div><b>Purpose:</b> {{ d.purpose }}</div>{% endif %}
+  </div>
+</header>
+
+<div class="callout info">This report distinguishes <span class="tag machine">machine-generated</span> findings from
+<span class="tag verified">analyst-verified</span> findings. Machine findings are observations produced by algorithms and
+must be checked against the source footage before being relied upon. Nothing in this report is a conclusion about the
+identity, intent or guilt of any person.</div>
+
+<nav class="toc"><ol>
+<li><a href="#summary">Executive summary</a></li><li><a href="#inputs">Input inventory and integrity</a></li>
+<li><a href="#quality">Technical quality</a></li><li><a href="#method">Processing pipeline and methodology</a></li>
+<li><a href="#coords">Coordinate system and calibration</a></li><li><a href="#recon">Reconstruction quality</a></li>
+<li><a href="#scene">Scene overview</a></li><li><a href="#objects">Object inventory</a></li>
+<li><a href="#people">People and face observations</a></li><li><a href="#vehicles">Vehicle observations</a></li>
+<li><a href="#timeline">Event timeline</a></li><li><a href="#trajectories">Trajectories and measurements</a></li>
+<li><a href="#multi">Multi-video synchronisation and alignment</a></li><li><a href="#analyst">Analyst-verified findings and notes</a></li>
+<li><a href="#limits">Limitations and warnings</a></li><li><a href="#appendix">Appendix: parameters, models, artefacts</a></li>
+</ol></nav>
+
+<h2 id="summary">1. Executive summary</h2>
+{% for l in d.summary %}<p class="lead">{{ l }}</p>{% endfor %}
+
+<h2 id="inputs">2. Input inventory and integrity</h2>
+<table><tr><th>ID</th><th>File</th><th>SHA-256 (at intake)</th><th>Size</th><th>Intake</th></tr>
+{% for i in d.inputs %}<tr><td>{{ i.id }}</td><td>{{ i.name }}</td><td class="mono">{{ i.sha256 }}</td>
+<td class="num">{{ "{:,}".format(i.size_bytes) }} B</td><td>{{ i.intake_time }}{% if i.copied %}<br><span class="tag">copied, read-only</span>{% endif %}</td></tr>{% endfor %}
+</table>
+<table><tr><th>ID</th><th>Container / codec</th><th>Resolution</th><th>FPS</th><th>Frames</th><th>Duration</th><th>VFR</th><th>Audio</th><th>Rotation</th><th>Decode errors</th><th>Capture</th><th>Offset</th></tr>
+{% for i in d.inputs %}<tr><td>{{ i.id }}</td><td>{{ i.container }} / {{ i.codec }}</td><td>{{ i.resolution }}</td><td class="num">{{ i.fps }}</td>
+<td class="num">{{ i.frames }}</td><td class="num">{{ i.duration_s }} s</td><td>{{ "yes" if i.vfr else "no" }}</td><td>{{ "yes" if i.audio else "no" }}</td>
+<td class="num">{{ i.rotation }}°</td><td class="num">{{ i.decode_errors }}</td><td>{{ i.mode }} ({{ i.mode_confidence }})</td><td class="num">{{ "%.3f"|format(i.offset) }} s</td></tr>{% endfor %}
+</table>
+<p><b>Integrity statement.</b> {{ d.integrity.statement }}</p>
+<p>Audit log: {{ d.integrity.audit_entries }} entries, hash chain {{ "valid" if d.integrity.audit_chain_valid else "BROKEN" }}; head hash <span class="mono">{{ d.integrity.audit_head }}</span>.</p>
+
+<h2 id="quality">3. Technical quality assessment</h2>
+{% for i in d.inputs %}
+<h3>{{ i.id }} — {{ i.name }}</h3>
+<p>Usable frames: {{ "%.0f"|format((i.quality.usable_fraction or 0) * 100) }}% · duplicate frames: {{ "%.0f"|format((i.quality.duplicate_fraction or 0)*100) }}% · timestamp gaps: {{ i.timing.gap_count }}{% for n in i.mode_notes %} · {{ n }}{% endfor %}</p>
+{% if i.quality.flags %}<div class="callout">{% for f in i.quality.flags %}{{ f }}{% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
+<div class="grid2"><figure><img src="{{ i.quality_chart }}"><figcaption>Sharpness, brightness and noise over time.</figcaption></figure>
+{% if i.thumbnail %}<figure><img src="{{ i.thumbnail }}"><figcaption>First frame (review proxy).</figcaption></figure>{% endif %}</div>
+{% endfor %}
+
+<h2 id="method">4. Processing pipeline and methodology</h2>
+<table><tr><th>Stage</th><th>Status</th><th>Duration</th><th>Warnings / fallbacks</th></tr>
+{% for s in d.stages %}<tr><td>{{ s.title }}</td><td>{{ s.status }}</td><td class="num">{{ s.duration_s or "—" }} s</td>
+<td>{% for w in s.warnings[:4] %}{{ w }}<br>{% endfor %}{% for f in s.fallbacks %}<b>Fallback:</b> {{ f.component }} → {{ f.used }}. {{ f.implication }}<br>{% endfor %}</td></tr>{% endfor %}
+</table>
+{% for u in d.units %}<h3>Reconstruction unit {{ u.id }} ({{ u.kind }})</h3><p>{{ u.method }}</p>{% endfor %}
+<p>{{ d.object_method }}</p>
+<h3>Evidence classes used throughout</h3>
+<table>{% for k, v in d.evidence_classes.items() %}<tr><td><b>{{ k }}</b></td><td>{{ v }}</td></tr>{% endfor %}</table>
+
+<h2 id="coords">5. Coordinate system and calibration</h2>
+<p><span class="badge status-{{ d.coordinate_system.status }}">{{ d.coordinate_system.status }}</span> {{ d.coordinate_system.status_text }}</p>
+<table>
+<tr><th>Axes</th><td>Right-handed, {{ d.coordinate_system.up }} up, ground {{ d.coordinate_system.ground }}; origin {{ d.coordinate_system.origin }}.</td></tr>
+<tr><th>Unit</th><td>{{ d.coordinate_system.unit }}</td></tr>
+<tr><th>Scale method</th><td>{{ d.coordinate_system.scale.method }}</td></tr>
+<tr><th>Scale uncertainty (1σ, relative)</th><td>{% if d.coordinate_system.scale.scale_sigma_rel %}{{ "%.1f"|format(d.coordinate_system.scale.scale_sigma_rel * 100) }}%{% else %}not quantified{% endif %}</td></tr>
+<tr><th>Assumptions</th><td><ul class="tight">{% for a in d.coordinate_system.scale.assumptions %}<li>{{ a }}</li>{% endfor %}</ul></td></tr>
+{% if d.coordinate_system.scale.references %}<tr><th>Analyst references</th><td>{% for r in d.coordinate_system.scale.references %}{{ r.label or r.id }}: {{ r.true_length_m }} m ± {{ r.sigma_m }} ({{ r.actor }}, {{ r.created }})<br>{% endfor %}</td></tr>{% endif %}
+</table>
+{% for u in d.units %}{% if u.calibration %}<h3>{{ u.id }}: camera calibration</h3><table>
+{% for k in ["method","pitch_deg","roll_deg","camera_height_m","camera_height_su","hfov_deg","focal_policy","median_reprojection_px","median_relative_error","people","samples","orientation_source","vertical_lines"] %}{% if u.calibration[k] is defined and u.calibration[k] is not none %}<tr><th>{{ k }}</th><td>{{ u.calibration[k] if u.calibration[k] is string else "%.3f"|format(u.calibration[k]) if u.calibration[k] is float else u.calibration[k] }}</td></tr>{% endif %}{% endfor %}
+</table>{% endif %}{% if u.sfm %}<h3>{{ u.id }}: structure from motion</h3><table>
+<tr><th>Registered keyframes</th><td>{{ u.sfm.registered }} / {{ u.sfm.images }}</td></tr><tr><th>3D points</th><td>{{ u.sfm.points3D }}</td></tr>
+<tr><th>Mean reprojection error</th><td>{{ "%.2f"|format(u.sfm.mean_reprojection_error_px) }} px</td></tr><tr><th>Mean track length</th><td>{{ "%.1f"|format(u.sfm.mean_track_length) }}</td></tr>
+<tr><th>Median triangulation angle</th><td>{{ "%.1f"|format(u.sfm.median_triangulation_angle_deg or 0) }}°</td></tr><tr><th>Focal prior</th><td>{{ u.sfm.focal_prior_hfov_deg }}° ({{ u.sfm.focal_prior_source }})</td></tr>
+</table>{% endif %}{% endfor %}
+
+<h2 id="recon">6. Reconstruction quality</h2>
+{% for u in d.units %}<h3>{{ u.id }}</h3><table><tr><th>Layer</th><th>Kind</th><th>Vertices</th><th>Faces</th><th>Evidence breakdown (vertices)</th></tr>
+{% for l in u.layers %}<tr><td>{{ l.name }}</td><td>{{ l.kind }}</td><td class="num">{{ l.vertices }}</td><td class="num">{{ l.faces }}</td>
+<td>{% for k, v in (l.evidence_vertices or {}).items() %}{{ k }}: {{ v }}<br>{% endfor %}</td></tr>{% endfor %}</table>
+{% if u.coverage %}<p>Ground coverage: {{ "%.0f"|format(u.coverage.seen_fraction*100) }}% of the mapped area seen by a camera, {{ "%.0f"|format(u.coverage.occluded_fraction*100) }}% in view but hidden; the rest was never in any field of view.</p>{% endif %}
+{% if u.fusion %}<p>Fusion: {{ u.fusion.keyframes }} keyframes, voxel {{ "%.3f"|format(u.fusion.voxel) }} {{ d.unit }}, median depth-alignment residual {{ "%.1f"|format(u.fusion.alignment_median_residual*100) }}%, consistency check: {{ u.fusion.consistency.consistent }} consistent / {{ u.fusion.consistency.conflict }} conflicting samples.</p>{% endif %}
+{% endfor %}
+
+<h2 id="scene">7. Scene overview</h2>
+<figure><img src="{{ d.figures.plan_view }}"><figcaption>Plan view: observed ground (green), inferred hidden ground (red hatching), facades (brown), poles (yellow), vehicles (blue; dashed = class-prior dimensions), trajectories, cameras (triangles).</figcaption></figure>
+{% if d.figures.view_color %}<div class="grid2"><figure><img src="{{ d.figures.view_color }}"><figcaption>Observed surface (colour from footage).</figcaption></figure>
+<figure><img src="{{ d.figures.view_evidence }}"><figcaption>Same view by evidence class: green multi-view, blue single-view.</figcaption></figure></div>{% endif %}
+{% for s in d.snapshots %}<figure><img src="{{ s.image }}"><figcaption>Analyst snapshot {{ s.id }}: {{ s.caption }} ({{ s.actor }}, {{ s.created }})</figcaption></figure>{% endfor %}
+
+<h2 id="objects">8. Reconstructed object inventory</h2>
+<table><tr><th>ID</th><th>Category</th><th>Geometry</th><th>Evidence</th><th>Conf.</th><th>Views</th><th>Dimensions (value ± σ, basis)</th><th>Notes</th></tr>
+{% for o in d.objects %}<tr><td class="mono">{{ o.id }}</td><td>{{ o.display }}</td><td>{{ o.type }}</td><td>{{ o.evidence }}</td>
+<td class="num">{{ "%.2f"|format(o.confidence) if o.confidence is not none else "—" }}</td><td class="num">{{ o.views }}</td>
+<td>{% for k, v in o.dimensions.items() %}{{ k }}: {{ v }}<br>{% endfor %}</td>
+<td>{% if o.openings %}{{ o.openings }} candidate opening(s)<br>{% endif %}{% if o.inferred %}{{ o.inferred }} inferred part(s)<br>{% endif %}{% for f in o.flags %}{{ f }}<br>{% endfor %}{% if o.tracks %}linked tracks: {{ o.tracks|join(", ") }}{% endif %}</td></tr>{% endfor %}
+</table>
+
+<h2 id="people">9. People and face observations</h2>
+<div class="callout">Face crops are unmodified original pixels from the recording (no enhancement). METRICA detects faces only; it does not identify anyone, compare faces against any database, or infer personal attributes. Statures are estimates{% if d.coordinate_system.scale.method and "statures" in d.coordinate_system.scale.method %} and are <b>not independent</b> of the scale, which itself assumed a mean stature{% endif %}.</div>
+{% for p in d.people %}<h3>{{ p.id }} <span class="tag machine">machine-generated</span></h3>
+<p>Observed {{ "%.2f"|format(p.t0) }}–{{ "%.2f"|format(p.t1) }} s (case time) in {{ p.video }}; {{ p.observations }} observations, {{ p.gaps }} gap(s){% if p.links %}, {{ p.links }} re-link(s) <span class="tag hyp">hypothesis</span>{% endif %}.
+{% if p.stature %} Estimated stature {{ "%.2f"|format(p.stature.median) }} {{ d.unit }} (IQR {{ "%.2f"|format(p.stature.iqr) }}, n={{ p.stature.n }}).{% endif %}
+{% if p.summary.path_length_observed %} Observed path {{ "%.1f"|format(p.summary.path_length_observed) }} {{ d.unit }}{% if p.summary.speed_median %}, median speed {{ "%.2f"|format(p.summary.speed_median) }} {{ d.unit }}/s{% endif %}.{% endif %}</p>
+<div class="crops">{% for c in p.crops %}<div class="crop"><img src="{{ c.image }}">body · frame {{ c.frame }} · {{ "%.2f"|format(c.t) }} s</div>{% endfor %}
+{% for f in p.faces %}<div class="crop"><img src="{{ f.image }}">face · frame {{ f.frame }} · {{ "%.2f"|format(f.t) }} s<br>{{ f.height_px }} px · {{ f.pose }} · det {{ f.score }} · sharp {{ f.sharpness }}<br>bbox {{ f.bbox }}</div>{% endfor %}</div>
+{% endfor %}
+
+<h2 id="vehicles">10. Vehicle observations</h2>
+{% for v in d.vehicles %}<h3>{{ v.id }} ({{ v.category }}) <span class="tag machine">machine-generated</span></h3>
+<p>Observed {{ "%.2f"|format(v.t0) }}–{{ "%.2f"|format(v.t1) }} s in {{ v.video }}{% if v.stationary %}; essentially stationary{% endif %}.
+{% if v.color %} Apparent colour: <b>{{ v.color.name }}</b> ({{ "reliable" if v.color.reliable else "not reliable" }}: {{ v.color.note }}){% endif %}</p>
+{% if v.ocr %}<table><tr><th>Candidate text</th><th>Reads</th><th>Confidence</th><th>Frames</th><th>Status</th></tr>{% for o in v.ocr %}<tr><td class="mono">{{ o.text }}</td><td class="num">{{ o.reads }}</td><td class="num">{{ o.confidence }}</td><td>{{ o.frames[:6]|join(", ") }}</td><td><span class="tag hyp">{{ o.status }}</span></td></tr>{% endfor %}</table>{% endif %}
+<div class="crops">{% for c in v.crops %}<div class="crop"><img src="{{ c.image }}">frame {{ c.frame }} · {{ "%.2f"|format(c.t) }} s</div>{% endfor %}</div>
+{% endfor %}
+
+<h2 id="timeline">11. Event timeline</h2>
+{% if d.figures.timeline %}<figure><img src="{{ d.figures.timeline }}"><figcaption>Observation spans per track.</figcaption></figure>{% endif %}
+<table><tr><th>ID</th><th>Case time</th><th>Type</th><th>Description</th><th>Source</th><th>Conf.</th><th>Status</th></tr>
+{% for e in d.events %}<tr><td class="mono">{{ e.id }}</td><td class="num">{{ "%.2f"|format(e.t) }}{% if e.t_end %}–{{ "%.2f"|format(e.t_end) }}{% endif %} s</td><td>{{ e.type }}</td><td>{{ e.description }}</td>
+<td>{{ e.video }}{% if e.frame is not none %} f{{ e.frame }}{% endif %}</td><td class="num">{{ "%.2f"|format(e.confidence) }}</td>
+<td>{% if e.hypothesis or e.requires_verification %}<span class="tag hyp">hypothesis</span>{% else %}<span class="tag machine">machine</span>{% endif %}</td></tr>{% endfor %}
+</table>
+
+<h2 id="trajectories">12. Trajectories and measurements</h2>
+<table><tr><th>Track</th><th>Observed path</th><th>Displacement</th><th>Median speed</th><th>Max speed</th><th>Position σ (median)</th></tr>
+{% for p in d.people + d.vehicles %}{% if p.summary.path_length_observed is defined %}<tr><td>{{ p.id }}</td><td class="num">{{ "%.1f"|format(p.summary.path_length_observed) }} {{ d.unit }}</td>
+<td class="num">{{ "%.1f"|format(p.summary.displacement) }} {{ d.unit }}</td><td class="num">{{ "%.2f"|format(p.summary.speed_median) if p.summary.speed_median is not none else "—" }} {{ d.unit }}/s</td>
+<td class="num">{{ "%.2f"|format(p.summary.speed_max) if p.summary.speed_max is not none else "—" }} {{ d.unit }}/s</td><td class="num">{{ "%.2f"|format(p.summary.position_sigma_median) }} {{ d.unit }}</td></tr>{% endif %}{% endfor %}
+</table>
+{% if d.coordinate_system.status in ["RELATIVE","ARBITRARY"] %}<div class="callout">Speeds and distances above are in scene units, not metres.</div>{% endif %}
+<h3>Analyst measurements</h3>
+{% if d.measurements %}<table><tr><th>ID</th><th>Type</th><th>Value</th><th>Status</th><th>Points / targets</th><th>By</th></tr>
+{% for m in d.measurements %}<tr><td class="mono">{{ m.id }}</td><td>{{ m.kind }}</td><td class="num">{{ m.display }}{% if m.label %}<br><span class="small">{{ m.label }}</span>{% endif %}{% if m.stale %}<br><b class="small">Warning: {{ m.stale }}</b>{% endif %}</td><td>{{ m.status }}</td><td class="mono">{{ m.points|tojson }}</td><td>{{ m.actor }}<br>{{ m.created }}</td></tr>{% endfor %}</table>
+{% else %}<p>No measurements were recorded.</p>{% endif %}
+
+<h2 id="multi">13. Multi-video synchronisation and alignment</h2>
+<table><tr><th>Video</th><th>Offset</th><th>Method</th><th>Confidence</th></tr>
+{% for i in d.inputs %}<tr><td>{{ i.id }}</td><td class="num">{{ "%.3f"|format(i.offset) }} s</td><td>{{ i.sync.method if i.sync else "—" }}</td><td class="num">{{ "%.2f"|format(i.sync.confidence) if i.sync else "—" }}</td></tr>{% endfor %}</table>
+<table><tr><th>Unit</th><th>Alignment method</th><th>Status</th><th>Residual</th></tr>
+{% for u in d.units %}<tr><td>{{ u.id }}</td><td>{{ u.alignment.method if u.alignment else "—" }}</td><td>{{ u.alignment.status if u.alignment else "—" }}</td><td class="num">{{ "%.2f"|format(u.alignment.rms) if u.alignment and u.alignment.rms is defined else "—" }}</td></tr>{% endfor %}</table>
+{% if d.grouping and d.grouping.pairs %}<h3>Grouping suggestion</h3><p>{{ d.grouping.note }} Suggested groups: {% for g in d.grouping.groups %}[{{ g|join(", ") }}]{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+<table><tr><th>Pair</th><th>Suggestion</th><th>Strong evidence</th><th>Weak context (not used for grouping)</th></tr>
+{% for p in d.grouping.pairs %}<tr><td>{{ p.a }} / {{ p.b }}</td><td>{{ p.suggestion }}</td><td>{{ p.strong_evidence|join("; ") or "—" }}</td><td>{{ p.weak_context|join("; ") or "—" }}</td></tr>{% endfor %}</table>{% endif %}
+{% if d.conflicts %}<h3>Cross-camera comparison</h3><table><tr><th>Tracks</th><th>Interval</th><th>Median distance</th><th>Conflict</th></tr>
+{% for c in d.conflicts %}<tr><td>{{ c.tracks|join(" / ") }}</td><td class="num">{{ "%.1f"|format(c.t0) }}–{{ "%.1f"|format(c.t1) }} s</td><td class="num">{{ "%.2f"|format(c.median_distance) }}</td><td>{{ c.conflict or "consistent" }}</td></tr>{% endfor %}</table>{% endif %}
+
+<h2 id="analyst">14. Analyst-verified findings and notes</h2>
+{% if d.verifications %}<table><tr><th>Item</th><th>Verdict</th><th>Note</th><th>Analyst</th><th>Time</th></tr>
+{% for v in d.verifications %}<tr><td class="mono">{{ v.target }}</td><td>{% if v.verdict == "verified" %}<span class="tag verified">verified</span>{% else %}{{ v.verdict }}{% endif %}</td><td>{{ v.note }}</td><td>{{ v.actor }}</td><td>{{ v.created }}</td></tr>{% endfor %}</table>
+{% else %}<p>No findings have been verified by an analyst. All findings in this report are machine-generated.</p>{% endif %}
+{% for n in d.notes %}<p><b>Note {{ n.id }}</b> ({{ n.actor }}, {{ n.created }}): {{ n.text }}</p>{% endfor %}
+
+<h2 id="limits">15. Limitations and warnings</h2>
+<ul>{% for l in d.limitations %}<li>{{ l }}</li>{% endfor %}</ul>
+<h3>Warnings recorded during processing</h3>
+{% if d.warnings %}<table><tr><th>Source</th><th>Message</th></tr>{% for w in d.warnings %}<tr><td>{{ w.source }}</td><td>{{ w.message }}</td></tr>{% endfor %}</table>{% else %}<p>None.</p>{% endif %}
+
+<h2 id="appendix">16. Appendix: parameters, models and artefacts</h2>
+<h3>Models</h3>
+<table><tr><th>Model</th><th>License</th><th>SHA-256</th><th>Source</th></tr>
+{% for m in d.models %}<tr><td>{{ m.about or m.key }}</td><td>{{ m.license }}</td><td class="mono">{{ m.sha256 }}</td><td class="mono">{{ m.source }}</td></tr>{% endfor %}</table>
+<h3>Processing parameters</h3>
+<table>{% for k, v in d.config.items() %}<tr><td class="mono">{{ k }}</td><td class="mono">{{ v }}</td></tr>{% endfor %}</table>
+<p>The case manifest (<span class="mono">manifest.json</span>, generated {{ d.integrity.manifest_generated }}) lists {{ d.integrity.outputs }} generated artefacts with SHA-256 hashes, software versions and stage records. Machine-readable exports accompany this report in <span class="mono">exports/</span>.</p>
+</div></body></html>

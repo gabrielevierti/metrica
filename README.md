@@ -1,0 +1,127 @@
+# METRICA
+
+**Evidence-oriented video-to-3D reconstruction and scene analysis — local-first.**
+
+METRICA turns one or more videos of the same place or event (CCTV, phone, body-worn, dash
+and drone footage, static or moving cameras) into a measurable, uncertainty-aware 3D scene:
+camera calibration and poses, a dense surface reconstruction, semantic 3D objects (facades,
+poles, vehicles, the ground), tracked people and vehicles with 3D trajectories, a neutral
+event timeline, measurement tools, and a professional HTML/PDF report with hashed exports.
+
+Every number carries its unit, its calibration status and its uncertainty. Every surface and
+object carries an **evidence class** that says how it is known — observed from several views,
+observed from one view, a fitted primitive, a class prior, or an inferred completion — so that
+nothing hidden is ever presented as observed.
+
+> METRICA produces **estimates**. Reconstructions and measurements derived from video are
+> not forensic measurements by default. Before relying on any value, verify it against at
+> least one real measurement on site and record that reference in the case (see
+> *Calibrating with a known distance* in the user guide).
+
+METRICA is the successor of [Sopralluogo](https://github.com/gabrielevierti/sopralluogo); see
+[What changed compared with Sopralluogo](#what-changed-compared-with-sopralluogo).
+
+## What it does
+
+| Stage | What happens |
+|---|---|
+| **Ingest** | Hashes and copies every original (read-only, verified after copy). Exact decode timestamps (VFR-safe), rotation metadata, corrupt-packet tolerance, quality metrics (sharpness, exposure, noise, compression blocking, duplicates), camera-motion classification (static / rotating / moving), adaptive keyframes, browser review proxy. Originals are never modified. |
+| **Detection & tracking** | YOLOX detector, ByteTrack-style two-stage tracker with class gating, recorded gaps and interaction flags, fragment re-linking recorded as a *hypothesis*, best crops, instance masks (EfficientSAM), face *detection* with quality metrics (no recognition), vehicle colour and OCR *candidates*. |
+| **Depth & semantics** | Monocular relative depth (Depth Anything V2 Small) and dense street-scene semantics (DUC, Cityscapes classes). |
+| **Geometry** | Static cameras: single-view metrology — focal length from orthogonal vanishing points, people as a ruler, vertical vanishing point — with explicit focal-length identifiability analysis. Rotating (pan/tilt) cameras: per-frame orientation by homography registration to a reference frame. Moving cameras: incremental structure from motion (COLMAP via pycolmap) with a focal prior, per-frame localisation, gravity alignment, scale from observed statures when enough people are visible. Degenerate cases fall back to documented, weaker statuses. |
+| **Reconstruction** | Single view: depth aligned to the calibrated ground plane, planar snapping, discontinuity-aware meshing. Multi-view: per-keyframe depth alignment to SfM points, multi-view consistency checks, TSDF fusion and marching cubes. Per-vertex evidence class and confidence; a coverage (seen / occluded / outside) map. |
+| **Semantic objects** | Facades (vertical planes, observed extent polygons, corners, candidate openings, occlusion-explained inferred patches, rectified textures), poles (cylinders with axis, height, radius, taper; hidden bases flagged), vehicles (footprint from points, unobserved dimensions completed from documented class priors), static objects, vegetation/unknown clusters, the ground (observed vs inferred extent, semantic regions). |
+| **Trajectories** | Foot-point ray / ground intersection with per-sample uncertainty, smoothing *within* observed segments only, speed only where the calibration supports it (with σ), stationary detection, stature estimates. |
+| **Multi-video** | Audio onset and scene-activity cross-correlation, manual offsets, alignment by joint SfM, analyst point pairs, shared visual landmarks (SIFT + depth, 4-DOF RANSAC) or shared tracks (labelled hypothesis), cross-camera conflict detection, grouping suggestions. |
+| **Analysis** | Neutral, machine-generated event timeline (appearances, disappearances, stops, proximity, crossings), each with confidence and a link to the source frame. |
+| **Viewer** | React + three.js: orbit / pan / zoom and first-person navigation, view-from-camera, top and overview views, photo / evidence / semantic / confidence colouring, wireframe, evidence-class and category filters, textured facades, inferred parts hatched in red, trajectories with dashed gaps, time-synchronised body proxies with σ rings, camera frustums and paths, synchronised video with detection boxes, exact source-frame viewer, distance / horizontal / vertical / height / angle measurement, point inspection, scale calibration with a known length, snapshots. |
+| **Report** | HTML and PDF (16 sections: summary, inputs and hashes, methods, calibration, reconstruction, objects, people, faces, vehicles, events, measurements, multi-video, analyst-verified findings, limitations, integrity, parameters), CSV/JSON exports, a ZIP, SHA-256 of every output, audit log entry. Machine findings and analyst-verified findings are kept distinct. |
+| **Integrity** | Case folder with separated `evidence/`, `derived/`, `annotations/`; hash-chained audit log; manifest with input/output hashes, software and model versions and all parameters; failed and degraded stages recorded. File hashes are explicitly **not** a statement of authenticity. |
+
+What METRICA deliberately does **not** do: identify people, search faces against any
+database, infer sensitive attributes, intent or criminality from appearance, infer vehicle
+ownership, or upload anything anywhere. See [docs/PRIVACY_AND_EVIDENCE.md](docs/PRIVACY_AND_EVIDENCE.md).
+
+## Quick start
+
+```bash
+# 1. install (Python 3.11-3.13, tested on 3.12; creates a virtual environment in .venv)
+./scripts/install.sh            # Windows: powershell -ExecutionPolicy Bypass -File scripts\install.ps1
+
+# 2. download the default models (~280 MB, verified by SHA-256; the only network access METRICA needs)
+.venv/bin/metrica models download
+
+# 3. start the application (opens http://127.0.0.1:8765)
+.venv/bin/metrica serve
+```
+
+Create a case, drop one or more videos, press **Analyze**, then explore the scene. The same
+pipeline runs from the command line:
+
+```bash
+.venv/bin/metrica analyze clip1.mp4 clip2.mov --case ~/METRICA/my-case --title "Via Roma, 6 October"
+.venv/bin/metrica report ~/METRICA/my-case --analyst "A. Analyst"
+.venv/bin/metrica verify ~/METRICA/my-case
+```
+
+A fully synthetic end-to-end demo with ground truth and an accuracy evaluation (no real
+footage involved):
+
+```bash
+.venv/bin/metrica demo --out ~/metrica-demo --kind walk
+```
+
+See [INSTALL.md](INSTALL.md) and [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [INSTALL.md](INSTALL.md) | Requirements, installation on macOS / Linux / Windows, GPU acceleration, offline use |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Workflow, viewer controls, measurement and calibration, reports |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Components, data model, pipeline stages, caching, job system, Sopralluogo assessment |
+| [docs/RECONSTRUCTION_METHODS.md](docs/RECONSTRUCTION_METHODS.md) | The algorithms, their assumptions and failure modes |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | Evaluation procedure and the results actually measured |
+| [docs/PRIVACY_AND_EVIDENCE.md](docs/PRIVACY_AND_EVIDENCE.md) | Evidence handling, integrity, privacy and the limits of what METRICA claims |
+| [docs/MODEL_LICENSES.md](docs/MODEL_LICENSES.md) | Every model and library, its licence and redistribution terms |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development setup, tests, conventions |
+
+## Accuracy
+
+METRICA does not claim an accuracy it has not measured. The numbers measured so far — on
+procedurally rendered scenes with exact ground truth, and qualitatively on a public test clip —
+are in [docs/EVALUATION.md](docs/EVALUATION.md) together with the procedure to reproduce them.
+They describe those test conditions only; real footage is usually harder (compression, low
+light, rolling shutter, unknown lenses).
+
+## What changed compared with Sopralluogo
+
+Sopralluogo (inspected read-only at commit `a6646b5`) is a compact Italian-language pipeline
+for **fixed cameras**: FFmpeg frame extraction, Depth Anything V2 + YOLO11, people-as-a-ruler
+calibration, a planar mesh with a content-aware *fill* layer, audio sync, and a React viewer.
+METRICA keeps its good ideas (people as a ruler, background plates, planar snapping, honest
+labelling of filled content) and rebuilds the rest:
+
+* moving cameras through structure from motion, localisation and TSDF fusion, not only fixed cameras;
+* semantic, parametric 3D objects with evidence classes instead of a single depth mesh;
+* explicit calibration statuses with propagated uncertainty and focal-length identifiability checks;
+* exact-timestamp decoding (VFR, rotation, corrupt packets) without FFmpeg frame dumps;
+* permissively licensed default models (YOLOX instead of AGPL YOLO11, which is opt-in only);
+* staged, cached, resumable, cancellable pipeline with a job system and failure records;
+* hash-chained audit log, intake verification, separated evidence / derived / annotations;
+* professional HTML/PDF reports and exports; tests and a ground-truth evaluation.
+
+A longer assessment is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#appendix-assessment-of-sopralluogo).
+
+## Status
+
+Version 0.1.0 — first complete release. Tested on Linux x86-64 (Python 3.12, CPU only). macOS
+(Apple Silicon) and Windows are supported by design (pure-Python code, cross-platform wheels,
+CoreML / DirectML execution providers) but were **not** tested for this release. See the
+"Limitations" section of [docs/RECONSTRUCTION_METHODS.md](docs/RECONSTRUCTION_METHODS.md).
+
+## Licence
+
+Apache-2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE)). Model weights are not part of this
+repository; each is downloaded from its original source under its own licence
+([docs/MODEL_LICENSES.md](docs/MODEL_LICENSES.md)).

@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metrica"
+dynamic = ["version"]
+description = "Evidence-oriented video-to-3D reconstruction and scene analysis (local-first)."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.11,<3.14"
+authors = [{ name = "METRICA contributors" }]
+keywords = ["computer-vision", "3d-reconstruction", "structure-from-motion", "forensics", "video-analysis"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
+  "Topic :: Scientific/Engineering :: Image Recognition",
+]
+# Every dependency below is permissively licensed (see docs/MODEL_LICENSES.md and NOTICE).
+dependencies = [
+  "numpy>=1.26,<3",
+  "scipy>=1.11",
+  "opencv-contrib-python-headless>=4.9,<5",   # 4.x: FaceDetectorYN, TextDetectionModel_DB, SIFT, ximgproc
+  "onnxruntime>=1.18",
+  "pycolmap>=3.12",                            # BSD-3: SfM, absolute pose, BA
+  "av>=12",                                    # PyAV: exact per-frame timestamps, decoding, proxy encoding
+  "scikit-image>=0.22",                        # marching cubes
+  "trimesh>=4.0",                              # GLB / PLY export
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "python-multipart>=0.0.9",
+  "pydantic>=2.6",
+  "jinja2>=3.1",
+  "reportlab>=4.0",
+  "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+cuda = ["onnxruntime-gpu>=1.18"]
+directml = ["onnxruntime-directml>=1.18"]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5"]
+
+[project.scripts]
+metrica = "metrica.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "metrica.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+include = ["metrica*"]
+
+[tool.setuptools.package-data]
+"metrica.reporting" = ["templates/*.j2", "assets/*"]
+"metrica.api" = ["static/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "slow: long-running tests (SfM, full pipeline)",
+  "models: tests that need downloaded model weights",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF034", "PLW0127", "B023"]
+ignore = ["E501", "E731", "E741", "B008", "B905"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["metrica"]
