@@ -2,6 +2,10 @@
 
 **Evidence-oriented video-to-3D reconstruction and scene analysis — local-first.**
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/de7afcff-3235-4ffc-8bfa-fe6ef3444374" alt="Sopralluogo">
+</p>
+
 METRICA turns one or more videos of the same place or event (CCTV, phone, body-worn, dash
 and drone footage, static or moving cameras) into a measurable, uncertainty-aware 3D scene:
 camera calibration and poses, a dense surface reconstruction, semantic 3D objects (facades,
